@@ -8,9 +8,9 @@ require 'config.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Sanitize and validate inputs
-    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        die("Invalid email address.");
+    $username = filter_var($_POST['username'], FILTER_SANITIZE_STRING);
+    if (empty($username)) {
+        die("Username is required.");
     }
 
     $password = $_POST['password'];
@@ -23,8 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         // Insert user into the database
-        $stmt = $pdo->prepare("INSERT INTO users (email, password, container_name) VALUES (?, ?, ?)");
-        $stmt->execute([$email, password_hash($password, PASSWORD_BCRYPT), $container_name]);
+        $stmt = $pdo->prepare("INSERT INTO users (username, password, container_name) VALUES (?, ?, ?)");
+        $stmt->execute([$username, password_hash($password, PASSWORD_BCRYPT), $container_name]);
 
         // Create the LXC container
         $container_name_safe = escapeshellarg($container_name);
