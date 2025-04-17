@@ -1,30 +1,34 @@
-
-<?php include 'config.php'; ?>
 <?php
+require 'config.php';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = strtolower(trim($_POST['username']));
-    $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
+    // Sanitize and validate inputs
+    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        die("Invalid email address.");
+    }
 
-    $check = $conn->prepare("SELECT * FROM users WHERE username = ?");
-    $check->bind_param("s", $username);
-    $check->execute();
-    $result = $check->get_result();
+    $password = $_POST['password'];
+    if (strlen($password) < 8) {
+        die("Password must be at least 8 characters long.");
+    }
 
-    if ($result->num_rows > 0) {
-        $error = "Username already exists.";
-    } else {
-        $stmt = $conn->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
-        $stmt->bind_param("ss", $username, $password);
-        $stmt->execute();
-        $container_name = $username . "-container";
+    // Generate a unique container name
+    $container_name = 'container_' . uniqid();
 
-        shell_exec("lxc launch ubuntu:20.04 $container_name");
-        shell_exec("lxc config set $container_name limits.disk 5GB");
-        $stmt = $conn->prepare("UPDATE users SET container_name=? WHERE username=?");
-        $stmt->bind_param("ss", $container_name, $username);
-        $stmt->execute();
-        header("Location: index.php");
-        exit;
+    try {
+        // Insert user into the database
+        $stmt = $pdo->prepare("INSERT INTO users (email, password, container_name) VALUES (?, ?, ?)");
+        $stmt->execute([$email, password_hash($password, PASSWORD_BCRYPT), $container_name]);
+
+        // Create the LXC container
+        $container_name_safe = escapeshellarg($container_name);
+        shell_exec("lxc launch ubuntu:20.04 $container_name_safe");
+
+        echo "Registration successful! Your container is being created.";
+    } catch (Exception $e) {
+        error_log("Error during registration: " . $e->getMessage());
+        die("An error occurred. Please try again later.");
     }
 }
 ?>
