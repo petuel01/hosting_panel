@@ -1,7 +1,7 @@
 
 <?php
 $host = 'localhost';
-$db = 'lxd_hosting';
+$db = 'hosting_panel';
 $user = 'root';
 $pass = 'Petzeus@123';
 $conn = new mysqli($host, $user, $pass, $db);
