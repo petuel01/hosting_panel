@@ -4,11 +4,11 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-require 'config.php';
+require 'config.php'; // Ensure this file defines and initializes $pdo
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Sanitize and validate inputs
-    $username = filter_var($_POST['username'], FILTER_SANITIZE_STRING);
+    $username = htmlspecialchars(trim($_POST['username'])); // Use htmlspecialchars and trim instead of FILTER_SANITIZE_STRING
     if (empty($username)) {
         die("Username is required.");
     }
@@ -22,13 +22,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $container_name = 'container_' . uniqid();
 
     try {
+        // Ensure $pdo is defined and connected
+        if (!isset($pdo)) {
+            throw new Exception("Database connection is not initialized.");
+        }
+
         // Insert user into the database
         $stmt = $pdo->prepare("INSERT INTO users (username, password, container_name) VALUES (?, ?, ?)");
         $stmt->execute([$username, password_hash($password, PASSWORD_BCRYPT), $container_name]);
 
         // Create the LXC container
         $container_name_safe = escapeshellarg($container_name);
-        shell_exec("lxc launch ubuntu:20.04 $container_name_safe");
+        $output = shell_exec("lxc launch ubuntu:20.04 $container_name_safe 2>&1");
+
+        if ($output === null) {
+            throw new Exception("Failed to execute LXC command.");
+        }
 
         echo "Registration successful! Your container is being created.";
     } catch (Exception $e) {
