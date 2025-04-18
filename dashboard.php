@@ -4,13 +4,22 @@ if (!isset($_SESSION['username'])) {
     header("Location: index.php");
     exit;
 }
-$user = $_SESSION['user'];
+
+require 'config.php'; // Ensure this file defines and initializes $pdo
+
+// Fetch the logged-in user's information
+$username = $_SESSION['username'];
+$stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+$stmt->execute([$username]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$user) {
+    die("User not found.");
+}
 
 // Fetch the allocated space for the user's container
-$container_name_safe = escapeshellarg($user['container_name']);
-$volume_info = shell_exec("lxc storage volume show default {$container_name_safe}_volume 2>&1");
-
-// Extract the allocated size from the volume information
+$container_name = $user['container_name'];
+$volume_info = shell_exec("lxc storage volume show mypool {$container_name}_volume 2>&1");
 $allocated_space = "Unknown"; // Default value if size is not found
 if (strpos($volume_info, 'size:') !== false) {
     preg_match('/size:\s*(\S+)/', $volume_info, $matches);
@@ -20,7 +29,7 @@ if (strpos($volume_info, 'size:') !== false) {
 }
 
 // Fetch the used space for the user's container
-$disk_usage_output = shell_exec("lxc exec {$user['container_name']} -- df -h / 2>&1");
+$disk_usage_output = shell_exec("lxc exec {$container_name} -- df -h / 2>&1");
 $used_space = "Unknown"; // Default value if usage is not found
 if (strpos($disk_usage_output, '/dev/') !== false) {
     preg_match('/\d+G/', $disk_usage_output, $matches);

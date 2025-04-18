@@ -41,16 +41,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("INSERT INTO users (username, password, container_name) VALUES (?, ?, ?)");
         $stmt->execute([$username, password_hash($password, PASSWORD_BCRYPT), $container_name]);
 
-        // Create a 2GB storage volume for the container
+        // Create a 2GB storage volume for the container in the "mypool" storage pool
         $volume_name = $container_name . "_volume";
-        $volume_output = shell_exec("lxc storage volume create default $volume_name size=2GB 2>&1");
+        $volume_output = shell_exec("lxc storage volume create mypool $volume_name size=2GB 2>&1");
         if (strpos($volume_output, 'Error') !== false) {
             throw new Exception("Failed to create a 2GB storage volume for the container: $volume_output");
         }
 
         // Launch the LXC container with the created volume
         $container_name_safe = escapeshellarg($container_name);
-        $launch_output = shell_exec("lxc launch ubuntu:22.04 $container_name_safe -s default -d 2>&1");
+        $launch_output = shell_exec("lxc launch ubuntu:22.04 $container_name_safe -s mypool -d 2>&1");
 
         if (strpos($launch_output, 'Error') !== false) {
             throw new Exception("Failed to launch the LXC container: $launch_output");
