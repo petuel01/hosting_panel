@@ -8,7 +8,7 @@ require 'config.php'; // Ensure this file defines and initializes $pdo
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Sanitize and validate inputs
-    $username = htmlspecialchars(trim($_POST['username'])); // Use htmlspecialchars and trim instead of FILTER_SANITIZE_STRING
+    $username = htmlspecialchars(trim($_POST['username'])); // Sanitize username
     if (empty($username)) {
         die("Username is required.");
     }
@@ -41,8 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         echo "Registration successful! Your container is being created.";
     } catch (Exception $e) {
+        // Log the error and display a user-friendly message
         error_log("Error during registration: " . $e->getMessage());
-        die("An error occurred. Please try again later.");
+        die("An error occurred. Please contact support.");
     }
 }
 ?>
