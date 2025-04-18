@@ -29,8 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Check if the Ubuntu image is available
         $image_check_output = shell_exec("lxc image list ubuntu:22.04 --format=json 2>&1");
-        if (strpos($image_check_output, 'not found') !== false) {
-            throw new Exception("The specified Ubuntu image (ubuntu:22.04) is not available on the server.");
+        if (empty($image_check_output) || strpos($image_check_output, 'not found') !== false) {
+            // Pull the image if it is not available
+            $pull_output = shell_exec("lxc image copy ubuntu:22.04 local: --alias ubuntu:22.04 2>&1");
+            if (strpos($pull_output, 'Error') !== false) {
+                throw new Exception("Failed to pull the Ubuntu image (ubuntu:22.04): $pull_output");
+            }
         }
 
         // Insert user into the database
@@ -46,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Launch the LXC container with the created volume
         $container_name_safe = escapeshellarg($container_name);
-        $launch_output = shell_exec("lxc launch ubuntu:20.04 $container_name_safe -s default -d 2>&1");
+        $launch_output = shell_exec("lxc launch ubuntu:22.04 $container_name_safe -s default -d 2>&1");
 
         if (strpos($launch_output, 'Error') !== false) {
             throw new Exception("Failed to launch the LXC container: $launch_output");
