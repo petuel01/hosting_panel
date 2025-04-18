@@ -18,7 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             session_regenerate_id(true);
             $_SESSION['user_id'] = $user['id'];
 
-            echo "Login successful!";
+            // Redirect to the dashboard
+            header("Location: dashboard.php");
+            exit;
         } else {
             die("Invalid username or password.");
         }
