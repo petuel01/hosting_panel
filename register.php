@@ -48,15 +48,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Failed to create a 2GB storage volume for the container: $volume_output");
         }
 
-        // Launch the LXC container with the created volume
+        // Launch the LXC container
         $container_name_safe = escapeshellarg($container_name);
         $launch_output = shell_exec("lxc launch ubuntu:22.04 $container_name_safe -s mypool -d 2>&1");
-
         if (strpos($launch_output, 'Error') !== false) {
             throw new Exception("Failed to launch the LXC container: $launch_output");
         }
 
-        echo "Registration successful! Your container is being created with a 2GB volume.";
+        // Create a dedicated directory for the user
+        $user_dir = "/var/www/users/$username";
+        if (!file_exists($user_dir)) {
+            mkdir($user_dir, 0750, true);
+            chown($user_dir, 'www-data');
+        }
+
+        // Attach the directory to the container
+        $attach_output = shell_exec("lxc config device add $container_name_safe userdir disk source=$user_dir path=/home/$username 2>&1");
+        if (strpos($attach_output, 'Error') !== false) {
+            throw new Exception("Failed to attach the user directory to the container: $attach_output");
+        }
+
+        // Set resource limits for the container
+        $cpu_limit_output = shell_exec("lxc config set $container_name_safe limits.cpu 2 2>&1");
+        $memory_limit_output = shell_exec("lxc config set $container_name_safe limits.memory 1GB 2>&1");
+        if (strpos($cpu_limit_output, 'Error') !== false || strpos($memory_limit_output, 'Error') !== false) {
+            throw new Exception("Failed to set resource limits for the container.");
+        }
+
+        echo "Registration successful! Your container is being created with a dedicated directory and resource limits.";
     } catch (Exception $e) {
         die("Error: " . $e->getMessage());
     }
