@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             session_start();
             session_regenerate_id(true);
             $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $username; // Add this line
 
             // Redirect to the dashboard
             header("Location: dashboard.php");
