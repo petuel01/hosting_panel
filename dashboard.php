@@ -19,7 +19,10 @@ if (!$user) {
 
 // Fetch the allocated space for the user's container
 $container_name = $user['container_name'];
-$volume_info = shell_exec("lxc storage volume show mypool {$container_name}_volume 2>&1");
+$volume_name = "{$container_name}_volume";
+
+// Use sudo to run LXC commands as lxduser
+$volume_info = shell_exec("sudo -u lxduser /snap/bin/lxc storage volume show mypool $volume_name 2>&1");
 $allocated_space = "Unknown"; // Default value if size is not found
 if (strpos($volume_info, 'size:') !== false) {
     preg_match('/size:\s*(\S+)/', $volume_info, $matches);
@@ -29,7 +32,7 @@ if (strpos($volume_info, 'size:') !== false) {
 }
 
 // Fetch the used space for the user's container
-$disk_usage_output = shell_exec("lxc exec {$container_name} -- df -h / 2>&1");
+$disk_usage_output = shell_exec("sudo -u lxduser /snap/bin/lxc exec $container_name -- df -h /mnt 2>&1");
 $used_space = "Unknown"; // Default value if usage is not found
 if (strpos($disk_usage_output, '/dev/') !== false) {
     preg_match('/\d+G/', $disk_usage_output, $matches);

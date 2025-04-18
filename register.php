@@ -28,10 +28,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Check if the Ubuntu image is available
-        $image_check_output = shell_exec("lxc image list ubuntu:22.04 --format=json 2>&1");
+        $image_check_output = shell_exec('sudo -u lxduser /snap/bin/lxc image list ubuntu:22.04 --format=json 2>&1');
         if (empty($image_check_output) || strpos($image_check_output, 'not found') !== false) {
             // Pull the image if it is not available
-            $pull_output = shell_exec("lxc image copy ubuntu:22.04 local: --alias ubuntu:22.04 2>&1");
+            $pull_output = shell_exec('sudo -u lxduser /snap/bin/lxc image copy ubuntu:22.04 local: --alias ubuntu:22.04 2>&1');
             if (strpos($pull_output, 'Error') !== false) {
                 throw new Exception("Failed to pull the Ubuntu image (ubuntu:22.04): $pull_output");
             }
@@ -43,16 +43,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Create a 2GB storage volume for the container in the "mypool" storage pool
         $volume_name = $container_name . "_volume";
-        $volume_output = shell_exec("lxc storage volume create mypool $volume_name size=2GB 2>&1");
+        $volume_output = shell_exec("sudo -u lxduser /snap/bin/lxc storage volume create mypool $volume_name size=2GB 2>&1");
         if (strpos($volume_output, 'Error') !== false) {
             throw new Exception("Failed to create a 2GB storage volume for the container: $volume_output");
         }
 
         // Launch the LXC container
         $container_name_safe = escapeshellarg($container_name);
-        $launch_output = shell_exec("lxc launch ubuntu:22.04 $container_name_safe -s mypool -d 2>&1");
+        $launch_output = shell_exec("sudo -u lxduser /snap/bin/lxc launch ubuntu:22.04 $container_name_safe -s mypool -d 2>&1");
         if (strpos($launch_output, 'Error') !== false) {
             throw new Exception("Failed to launch the LXC container: $launch_output");
+        }
+
+        // Attach the storage volume to the container
+        $attach_volume_output = shell_exec("sudo -u lxduser /snap/bin/lxc storage volume attach mypool $volume_name $container_name_safe /mnt 2>&1");
+        if (strpos($attach_volume_output, 'Error') !== false) {
+            throw new Exception("Failed to attach the storage volume to the container: $attach_volume_output");
         }
 
         // Create a dedicated directory for the user
@@ -63,19 +69,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Attach the directory to the container
-        $attach_output = shell_exec("lxc config device add $container_name_safe userdir disk source=$user_dir path=/home/$username 2>&1");
-        if (strpos($attach_output, 'Error') !== false) {
-            throw new Exception("Failed to attach the user directory to the container: $attach_output");
+        $attach_dir_output = shell_exec("sudo -u lxduser /snap/bin/lxc config device add $container_name_safe userdir disk source=$user_dir path=/home/$username 2>&1");
+        if (strpos($attach_dir_output, 'Error') !== false) {
+            throw new Exception("Failed to attach the user directory to the container: $attach_dir_output");
         }
 
         // Set resource limits for the container
-        $cpu_limit_output = shell_exec("lxc config set $container_name_safe limits.cpu 2 2>&1");
-        $memory_limit_output = shell_exec("lxc config set $container_name_safe limits.memory 1GB 2>&1");
+        $cpu_limit_output = shell_exec("sudo -u lxduser /snap/bin/lxc config set $container_name_safe limits.cpu 2 2>&1");
+        $memory_limit_output = shell_exec("sudo -u lxduser /snap/bin/lxc config set $container_name_safe limits.memory 1GB 2>&1");
         if (strpos($cpu_limit_output, 'Error') !== false || strpos($memory_limit_output, 'Error') !== false) {
             throw new Exception("Failed to set resource limits for the container.");
         }
 
-        echo "Registration successful! Your container is being created with a dedicated directory and resource limits.";
+        echo "Registration successful! Your container is being created with a dedicated directory, 2GB storage volume, and resource limits.";
     } catch (Exception $e) {
         die("Error: " . $e->getMessage());
     }
