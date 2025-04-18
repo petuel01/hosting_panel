@@ -41,9 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         echo "Registration successful! Your container is being created.";
     } catch (Exception $e) {
-        // Log the error and display a user-friendly message
-        error_log("Error during registration: " . $e->getMessage());
-        die("An error occurred. Please contact support.");
+        die("Error: " . $e->getMessage());
     }
 }
 ?>

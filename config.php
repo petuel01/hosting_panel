@@ -1,11 +1,16 @@
 
 <?php
-$host = 'localhost';
-$db = 'lxd_hosting';
-$user = 'root';
-$pass = 'Petzeus@123';
-$conn = new mysqli($host, $user, $pass, $db);
-if ($conn->connect_error) {
-    die("Database connection failed: " . $conn->connect_error);
+
+$dsn = "mysql:host=localhost;dbname=lxd_hosting";
+$db_user = "root";
+$db_pass = "Petzeus@123";
+
+try {
+    $pdo = new PDO($dsn, $db_user, $db_pass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+} catch (PDOException $e) {
+    die("Database connection failed: " . $e->getMessage());
 }
 ?>
