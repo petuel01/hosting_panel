@@ -3,13 +3,13 @@ require 'config.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Sanitize inputs
-    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+    $username = filter_var($_POST['username'], FILTER_SANITIZE_STRING);
     $password = $_POST['password'];
 
     try {
         // Fetch user from the database
-        $stmt = $pdo->prepare("SELECT id, password FROM users WHERE email = ?");
-        $stmt->execute([$email]);
+        $stmt = $pdo->prepare("SELECT id, password FROM users WHERE username = ?");
+        $stmt->execute([$username]);
         $user = $stmt->fetch();
 
         if ($user && password_verify($password, $user['password'])) {
@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             echo "Login successful!";
         } else {
-            die("Invalid email or password.");
+            die("Invalid username or password.");
         }
     } catch (Exception $e) {
         error_log("Error during login: " . $e->getMessage());
