@@ -8,7 +8,7 @@ if (!preg_match('/^[a-z_][a-z0-9_-]*$/', $username)) {
     exit;
 }
 
-$user_dir = "/home/$username";
+$user_dir = "/home/users/$username";
 
 if (!is_dir($user_dir)) {
     echo json_encode([]);
