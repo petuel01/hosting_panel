@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>User File Browser</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container mt-5">
+  <h2>User File Browser</h2>
+
+  <!-- Replace this with actual auth/login logic -->
+  <input type="text" id="username" class="form-control mb-3" placeholder="Enter username">
+
+  <button onclick="loadFiles()" class="btn btn-primary mb-4">Load Files</button>
+
+  <table class="table table-bordered" id="fileTable">
+    <thead>
+      <tr>
+        <th>File Name</th>
+        <th>Size (KB)</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    function loadFiles() {
+      const username = document.getElementById('username').value;
+      fetch(`list_files.php?username=${username}`)
+        .then(res => res.json())
+        .then(files => {
+          const tbody = document.querySelector("#fileTable tbody");
+          tbody.innerHTML = "";
+
+          files.forEach(file => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${file.name}</td>
+              <td>${file.is_dir ? "—" : file.size_kb}</td>
+              <td>
+                <a href="download.php?username=${username}&file=${file.name}" class="btn btn-sm btn-success">Download</a>
+              </td>
+            `;
+            tbody.appendChild(row);
+          });
+        })
+        .catch(err => alert("Error loading files"));
+    }
+  </script>
+</body>
+</html>
