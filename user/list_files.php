@@ -1,34 +1,33 @@
 <?php
-// Example: ?username=john
+header('Content-Type: application/json');
 
-// Get username from query parameter
 $username = $_GET['username'] ?? '';
-$baseDir = "/home/users/";
-$userDir = realpath($baseDir . $username);  // Prevent path traversal
 
-// Validate
-if (!$username || !is_dir($userDir)) {
-    http_response_code(400);
-    echo json_encode(["error" => "Invalid user or directory not found"]);
+if (!preg_match('/^[a-z_][a-z0-9_-]*$/', $username)) {
+    echo json_encode([]);
     exit;
 }
 
-// List files
-$files = scandir($userDir);
+$user_dir = "/home/users/$username";
+
+if (!is_dir($user_dir)) {
+    echo json_encode([]);
+    exit;
+}
+
+$files = array_diff(scandir($user_dir), ['.', '..']);
 $result = [];
 
 foreach ($files as $file) {
-    if ($file === '.' || $file === '..') continue;
-
-    $path = $userDir . DIRECTORY_SEPARATOR . $file;
-    $result[] = [
-        'name' => $file,
-        'size_kb' => round(filesize($path) / 1024, 2),
-        'is_dir' => is_dir($path)
-    ];
+    $filepath = "$user_dir/$file";
+    if (is_file($filepath)) {
+        $result[] = [
+            'name' => $file,
+            'size' => round(filesize($filepath) / 1024, 2),
+            'modified' => date("Y-m-d H:i:s", filemtime($filepath))
+        ];
+    }
 }
 
-// Output as JSON
-header('Content-Type: application/json');
 echo json_encode($result);
 ?>
