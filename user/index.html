@@ -1,50 +1,143 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>User File Browser</title>
+  <title>User File Manager</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body class="container mt-5">
-  <h2>User File Browser</h2>
+  <h2>User File Manager</h2>
 
-  <!-- Replace this with actual auth/login logic -->
+  <!-- Input for username -->
   <input type="text" id="username" class="form-control mb-3" placeholder="Enter username">
 
-  <button onclick="loadFiles()" class="btn btn-primary mb-4">Load Files</button>
+  <!-- Buttons for actions -->
+  <div class="mb-3">
+    <button onclick="loadFiles()" class="btn btn-primary">Load Files</button>
+    <button onclick="showUploadModal()" class="btn btn-success">Upload File/Folder</button>
+  </div>
 
+  <!-- Table to display files and folders -->
   <table class="table table-bordered" id="fileTable">
     <thead>
       <tr>
-        <th>File Name</th>
-        <th>Size (KB)</th>
-        <th>Action</th>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Size</th>
+        <th>Last Modified</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
+
+  <!-- Modal for uploading files -->
+  <div class="modal" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Upload File/Folder</h5>
+          <button type="button" class="btn-close" onclick="hideUploadModal()"></button>
+        </div>
+        <div class="modal-body">
+          <form id="uploadForm" enctype="multipart/form-data">
+            <input type="hidden" id="uploadUsername" name="username">
+            <div class="mb-3">
+              <label for="fileInput" class="form-label">Select File/Folder</label>
+              <input type="file" id="fileInput" name="file" class="form-control" multiple>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="uploadFiles()">Upload</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
     function loadFiles() {
       const username = document.getElementById('username').value;
       fetch(`list_files.php?username=${username}`)
         .then(res => res.json())
-        .then(files => {
+        .then(items => {
           const tbody = document.querySelector("#fileTable tbody");
           tbody.innerHTML = "";
 
-          files.forEach(file => {
+          if (items.error) {
+            alert(items.error);
+            return;
+          }
+
+          items.forEach(item => {
             const row = document.createElement("tr");
             row.innerHTML = `
-              <td>${file.name}</td>
-              <td>${file.is_dir ? "—" : file.size_kb}</td>
+              <td>${item.name}</td>
+              <td>${item.type}</td>
+              <td>${item.size}</td>
+              <td>${item.modified}</td>
               <td>
-                <a href="download.php?username=${username}&file=${file.name}" class="btn btn-sm btn-success">Download</a>
+                <button class="btn btn-sm btn-warning" onclick="editItem('${item.name}', '${item.type}')">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteItem('${item.name}', '${item.type}')">Delete</button>
               </td>
             `;
             tbody.appendChild(row);
           });
         })
         .catch(err => alert("Error loading files"));
+    }
+
+    function showUploadModal() {
+      const username = document.getElementById('username').value;
+      if (!username) {
+        alert("Please enter a username first.");
+        return;
+      }
+      document.getElementById('uploadUsername').value = username;
+      document.getElementById('uploadModal').style.display = 'block';
+    }
+
+    function hideUploadModal() {
+      document.getElementById('uploadModal').style.display = 'none';
+    }
+
+    function uploadFiles() {
+      const form = document.getElementById('uploadForm');
+      const formData = new FormData(form);
+
+      fetch('upload.php', {
+        method: 'POST',
+        body: formData
+      })
+        .then(res => res.json())
+        .then(response => {
+          if (response.success) {
+            alert("Upload successful!");
+            hideUploadModal();
+            loadFiles();
+          } else {
+            alert(response.error || "Upload failed.");
+          }
+        })
+        .catch(err => alert("Error uploading files"));
+    }
+
+    function deleteItem(name, type) {
+      const username = document.getElementById('username').value;
+      if (!confirm(`Are you sure you want to delete this ${type}: ${name}?`)) return;
+
+      fetch('delete_file.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, file: name })
+      })
+        .then(res => res.json())
+        .then(response => {
+          if (response.success) {
+            alert("Deleted successfully!");
+            loadFiles();
+          } else {
+            alert(response.error || "Delete failed.");
+          }
+        })
+        .catch(err => alert("Error deleting item"));
     }
   </script>
 </body>
