@@ -8,12 +8,14 @@ $baseDir = "/home/users/";
 $userDir = realpath($baseDir . $username);
 $filePath = realpath($userDir . DIRECTORY_SEPARATOR . $file);
 
-if (strpos($filePath, $userDir) !== 0 || !is_file($filePath)) {
+// Validate the file path
+if (!$filePath || strpos($filePath, $userDir) !== 0 || !is_file($filePath)) {
     http_response_code(403);
     echo json_encode(['error' => 'Forbidden or file not found.']);
     exit;
 }
 
+// Write content to the file
 if (file_put_contents($filePath, $content) !== false) {
     echo json_encode(['success' => true]);
 } else {

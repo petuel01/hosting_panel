@@ -144,25 +144,25 @@
       document.getElementById('uploadModal').style.display = 'none';
     }
 
-    function uploadFiles() {
-      const form = document.getElementById('uploadForm');
-      const formData = new FormData(form);
-
-      fetch('upload.php', {
-        method: 'POST',
-        body: formData
-      })
-        .then(res => res.json())
-        .then(response => {
-          if (response.success) {
-            alert("Upload successful!");
-            hideUploadModal();
-            loadFiles();
-          } else {
-            alert(response.error || "Upload failed.");
-          }
+        function uploadFiles() {
+        const form = document.getElementById('uploadForm');
+        const formData = new FormData(form);
+    
+        fetch('upload.php', {
+            method: 'POST',
+            body: formData
         })
-        .catch(err => alert("Error uploading files"));
+            .then(res => res.json())
+            .then(response => {
+                if (response.success) {
+                    alert(response.message || "Upload successful!");
+                    hideUploadModal();
+                    loadFiles();
+                } else {
+                    alert(response.error || "Upload failed.");
+                }
+            })
+            .catch(err => alert("Error uploading files"));
     }
 
     function editFile(name) {
