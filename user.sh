@@ -43,27 +43,30 @@ create_linux_user() {
         echo "User $username already exists."
     else
         echo "Creating user $username..."
-        useradd -m -s /bin/bash "$username" || { echo "Error: Failed to create user $username"; exit 1; }
-
+        useradd -m -d "$USER_DIR_BASE/$username" -s /bin/bash "$username" || { echo "Error: Failed to create user $username"; exit 1; }
         echo "$username:$password" | chpasswd || { echo "Error: Failed to set password for $username"; exit 1; }
-
         echo "User $username created and password set."
     fi
 }
 
-# Function to create a user directory
+# Function to create a user directory (already done via -m -d above, so ensure ownership only)
+# Function to create a user directory (already done via -m -d above, so ensure ownership only)
 create_user_directory() {
     local username=$1
     local user_dir="$USER_DIR_BASE/$username"
 
-    if [ -d "$user_dir" ]; then
-        echo "Directory for user $username already exists: $user_dir"
-    else
+    if [ ! -d "$user_dir" ]; then
         echo "Creating directory for user $username: $user_dir"
         mkdir -p "$user_dir" || { echo "Error: Failed to create directory $user_dir"; exit 1; }
-        chown "$username:$username" "$user_dir" || { echo "Error: Failed to set ownership for $user_dir"; exit 1; }
     fi
+
+    # Set permissions so Nginx or other services can access it
+    chown root:root "$user_dir" || { echo "Error: Failed to change ownership to root"; exit 1; }
+    chmod 755 "$user_dir" || { echo "Error: Failed to set permissions to 755"; exit 1; }
+
+    echo "Permissions for $user_dir set to root:root with 755 access."
 }
+
 
 # Function to monitor and enforce size limits
 monitor_and_enforce_limits() {
@@ -83,9 +86,6 @@ monitor_and_enforce_limits() {
         echo "Warning: $msg"
         echo "$(date): $msg" >> "$LOG_FILE"
         logger -t user_dir_mgmt "$msg"
-
-        # Optional: Delete files older than 30 days (commented)
-        # find "$user_dir" -type f -mtime +30 -exec rm -f {} \;
     else
         echo "Directory $user_dir is within the size limit of $size_limit KB (Current size: $dir_size KB)"
     fi
@@ -95,7 +95,6 @@ monitor_and_enforce_limits() {
 main() {
     local username password size_limit
 
-    # Check for CLI arguments
     if [[ $# -eq 3 ]]; then
         username=$1
         password=$2
@@ -104,7 +103,7 @@ main() {
         read -p "Enter the username: " username
         read -s -p "Enter the password: " password
         echo ""
-        read -p "Enter the size limit in KB (e.g., 500000 for 500MB): " size_limit
+        read -p "Enter the size limit in KB (e.g., 2000000 for 2GB): " size_limit
     fi
 
     validate_username "$username"
@@ -114,7 +113,19 @@ main() {
     create_user_directory "$username"
     monitor_and_enforce_limits "$username" "$size_limit"
 
-    echo "User directory management completed successfully."
+    # Print summary
+    local user_dir="$USER_DIR_BASE/$username"
+    local dir_size=$(du -sh "$user_dir" | cut -f1)
+    echo ""
+    echo "========================================="
+    echo "User Directory Setup Summary"
+    echo "========================================="
+    echo "Username:          $username"
+    echo "Home Directory:    $user_dir"
+    echo "Size Limit:        $size_limit KB"
+    echo "Current Directory Size: $dir_size"
+    echo "========================================="
+    echo "Setup completed successfully."
 }
 
 main "$@"
