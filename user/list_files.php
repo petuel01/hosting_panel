@@ -2,24 +2,37 @@
 header('Content-Type: application/json');
 
 $username = $_GET['username'] ?? '';
+$path = $_GET['path'] ?? '';
 
 if (!preg_match('/^[a-z_][a-z0-9_-]*$/', $username)) {
     echo json_encode(['error' => 'Invalid username format.']);
     exit;
 }
 
-$user_dir = "/home/users/$username";
+$baseDir = "/home/users/$username";
+$targetDir = realpath($baseDir . DIRECTORY_SEPARATOR . $path);
 
-if (!is_dir($user_dir)) {
-    echo json_encode(['error' => "Directory for user '$username' does not exist."]);
+// Ensure the target directory is within the user's base directory
+if (strpos($targetDir, realpath($baseDir)) !== 0 || !is_dir($targetDir)) {
+    echo json_encode(['error' => 'Invalid directory path.']);
     exit;
 }
 
-$items = array_diff(scandir($user_dir), ['.', '..']);
+$items = array_diff(scandir($targetDir), ['.', '..']);
 $result = [];
 
+// Add a "Parent Directory" link if not in the base directory
+if ($targetDir !== realpath($baseDir)) {
+    $result[] = [
+        'name' => '..',
+        'type' => 'folder',
+        'size' => '-',
+        'modified' => '-'
+    ];
+}
+
 foreach ($items as $item) {
-    $filepath = "$user_dir/$item";
+    $filepath = $targetDir . DIRECTORY_SEPARATOR . $item;
     $is_dir = is_dir($filepath);
     $result[] = [
         'name' => $item,

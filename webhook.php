@@ -4,7 +4,7 @@ $secret = 'baifempetuelkey'; // Replace with the secret you set in the GitHub we
 
 // Get the payload and signature from the request
 $payload = file_get_contents('php://input');
-$signature = $_SERVER['HTTP_X_HUB_SIGNATURE'] ?? ''; // Use correct header
+$signature = $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? '';
 
 // Validate the signature
 $hash = 'sha256=' . hash_hmac('sha256', $payload, $secret);
@@ -19,8 +19,7 @@ $data = json_decode($payload, true);
 // Check if it's a push event
 if ($data['ref'] === 'refs/heads/main') { // Replace 'main' with your branch name if different
     // Pull the latest changes from GitHub
-    $output = shell_exec('cd /var/www/hosting_panel && git pull origin main 2>&1');
-    // Log the output
+    $output = shell_exec('cd /var/www/hosting_panel && git pull 2>&1');
     file_put_contents('/var/log/github-webhook.log', date('Y-m-d H:i:s') . " - Git Pull Output:\n" . $output . "\n", FILE_APPEND);
     echo "Git pull executed.";
 } else {
