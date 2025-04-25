@@ -20,54 +20,51 @@ $db_name = 'lxd_hosting';
 $db_user = $wp_username;
 $db_password = $wp_password;
 
-// Directory for the WordPress site
-$wordpressDir = "/home/users/" . $_SESSION['linux_username'] . "/wordpress_sites";
+// Directory for the WordPress site inside the user's folder
+$linux_username = $_SESSION['linux_username']; // Ensure this is set in the session
+$wordpressDir = "/home/users/" . $linux_username . "/wordpress_sites";
 if (!is_dir($wordpressDir)) {
-    mkdir($wordpressDir, 0755, true);
+    // Create the user's WordPress directory with proper permissions
+    exec("sudo mkdir -p $wordpressDir && sudo chown -R www-data:www-data $wordpressDir && sudo chmod -R 755 $wordpressDir", $output, $return_var);
+    if ($return_var !== 0) {
+        echo json_encode(['success' => false, 'error' => 'Failed to create WordPress directory.']);
+        exit;
+    }
 }
 
 // Check if the site already exists
-$siteDir = $wordpressDir . '/' . parse_url($domain, PHP_URL_HOST);
+$siteDir = $wordpressDir . '/' . $site_name;
 if (is_dir($siteDir)) {
     // Check if reinstallation is requested
     if (isset($_POST['force_reinstall']) && $_POST['force_reinstall'] === 'true') {
         // Remove the existing directory
-        exec("sudo rm -rf $siteDir", $output, $return_var);
+        $sanitizedSiteDir = escapeshellarg($siteDir);
+        exec("sudo rm -rf $sanitizedSiteDir", $output, $return_var);
         if ($return_var !== 0) {
             echo json_encode(['success' => false, 'error' => 'Failed to remove existing site directory.']);
             exit;
         }
     } else {
-        echo json_encode(['success' => false, 'error' => 'A site with this domain already exists.']);
+        echo json_encode(['success' => false, 'error' => 'A site with this name already exists.']);
         exit;
     }
 }
 
-// MySQL root password
-$mysqlRootPassword = 'Petzeus@123';
-
-// Step 1: Setup MySQL (Skip if database user already exists)
-exec("sudo mysql -u root -p$mysqlRootPassword -e 'SELECT User FROM mysql.user WHERE User=\"$db_user\";'", $output, $return_var);
-if (empty($output)) {
-    $mysqlCommands = <<<EOF
-CREATE USER IF NOT EXISTS '$db_user'@'localhost' IDENTIFIED BY '$db_password';
-GRANT ALL PRIVILEGES ON `$db_name`.* TO '$db_user'@'localhost';
-FLUSH PRIVILEGES;
-EOF;
-
-    exec("echo \"$mysqlCommands\" | sudo mysql -u root -p$mysqlRootPassword", $output, $return_var);
-    if ($return_var !== 0) {
-        echo json_encode(['success' => false, 'error' => 'Failed to set up MySQL database user.']);
-        exit;
-    }
+// Create the site directory
+exec("sudo mkdir -p $siteDir && sudo chown -R www-data:www-data $siteDir && sudo chmod -R 755 $siteDir", $output, $return_var);
+if ($return_var !== 0) {
+    echo json_encode(['success' => false, 'error' => 'Failed to create site directory.']);
+    exit;
 }
 
-// Step 2: Download and Configure WordPress
-exec("sudo mkdir -p $siteDir && cd $siteDir && sudo wget -q https://wordpress.org/latest.tar.gz && sudo tar -xzf latest.tar.gz --strip-components=1 && sudo rm latest.tar.gz", $output, $return_var);
+// Step 1: Download and Configure WordPress
+exec("cd $siteDir && sudo wget -q https://wordpress.org/latest.tar.gz && sudo tar -xzf latest.tar.gz --strip-components=1 && sudo rm latest.tar.gz", $output, $return_var);
 if ($return_var !== 0) {
     echo json_encode(['success' => false, 'error' => 'Failed to download and configure WordPress.']);
     exit;
 }
+
+// Step 2: Set Permissions
 exec("sudo chown -R www-data:www-data $siteDir && sudo find $siteDir -type d -exec chmod 755 {} \\; && sudo find $siteDir -type f -exec chmod 644 {} \\;", $output, $return_var);
 if ($return_var !== 0) {
     echo json_encode(['success' => false, 'error' => 'Failed to set permissions for WordPress files.']);
