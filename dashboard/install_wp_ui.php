@@ -56,6 +56,10 @@ if (!isset($_SESSION['user_id'])) {
                                 <label for="wp_email" class="form-label">WordPress Email</label>
                                 <input type="email" id="wp_email" name="wp_email" class="form-control" required>
                             </div>
+                            <div class="mb-3">
+                                <input type="checkbox" id="force_reinstall" name="force_reinstall" value="true">
+                                <label for="force_reinstall" class="form-label">Force Reinstallation (overwrite existing site)</label>
+                            </div>
                             <button type="submit" class="btn btn-primary w-100">Proceed with Installation</button>
                         </form>
                     </div>
