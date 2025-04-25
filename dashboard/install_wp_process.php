@@ -19,15 +19,26 @@ $wp_password = $_POST['wp_password'];
 $wp_email = $_POST['wp_email'];
 
 // Directory for the WordPress site
-$wordpressDir = "/home/users/" . $_SESSION['linux_username'] . "/$site_name";
+$wordpressDir = "/home/users/" . $_SESSION['linux_username'] . "/wordpress_sites";
 if (!is_dir($wordpressDir)) {
     mkdir($wordpressDir, 0755, true);
 }
 
 // Check if the site already exists
-if (is_dir($wordpressDir)) {
-    echo json_encode(['success' => false, 'error' => 'A site with this name already exists.']);
-    exit;
+$siteDir = $wordpressDir . '/' . parse_url($domain, PHP_URL_HOST);
+if (is_dir($siteDir)) {
+    // Check if reinstallation is requested
+    if (isset($_POST['force_reinstall']) && $_POST['force_reinstall'] === 'true') {
+        // Remove the existing directory
+        exec("sudo rm -rf $siteDir", $output, $return_var);
+        if ($return_var !== 0) {
+            echo json_encode(['success' => false, 'error' => 'Failed to remove existing site directory.']);
+            exit;
+        }
+    } else {
+        echo json_encode(['success' => false, 'error' => 'A site with this domain already exists.']);
+        exit;
+    }
 }
 
 // MySQL root password
@@ -60,28 +71,26 @@ EOF;
     }
 }
 
-// Step 3: Download and Configure WordPress (Skip if already downloaded)
-if (!is_dir($wordpressDir)) {
-    exec("sudo mkdir -p $wordpressDir && cd $wordpressDir && sudo wget -q https://wordpress.org/latest.tar.gz && sudo tar -xzf latest.tar.gz --strip-components=1 && sudo rm latest.tar.gz", $output, $return_var);
-    if ($return_var !== 0) {
-        echo json_encode(['success' => false, 'error' => 'Failed to download and configure WordPress.']);
-        exit;
-    }
-    exec("sudo chown -R www-data:www-data $wordpressDir && sudo find $wordpressDir -type d -exec chmod 755 {} \\; && sudo find $wordpressDir -type f -exec chmod 644 {} \\;", $output, $return_var);
-    if ($return_var !== 0) {
-        echo json_encode(['success' => false, 'error' => 'Failed to set permissions for WordPress files.']);
-        exit;
-    }
+// Step 3: Download and Configure WordPress
+exec("sudo mkdir -p $siteDir && cd $siteDir && sudo wget -q https://wordpress.org/latest.tar.gz && sudo tar -xzf latest.tar.gz --strip-components=1 && sudo rm latest.tar.gz", $output, $return_var);
+if ($return_var !== 0) {
+    echo json_encode(['success' => false, 'error' => 'Failed to download and configure WordPress.']);
+    exit;
+}
+exec("sudo chown -R www-data:www-data $siteDir && sudo find $siteDir -type d -exec chmod 755 {} \\; && sudo find $siteDir -type f -exec chmod 644 {} \\;", $output, $return_var);
+if ($return_var !== 0) {
+    echo json_encode(['success' => false, 'error' => 'Failed to set permissions for WordPress files.']);
+    exit;
 }
 
-// Step 4: Configure Nginx (Skip if configuration already exists)
+// Step 4: Configure Nginx
 $nginxConfigPath = "/etc/nginx/sites-available/$domain";
 if (!file_exists($nginxConfigPath)) {
     $nginxConfig = <<<NGINX
 server {
     listen 80;
     server_name $domain;
-    root $wordpressDir;
+    root $siteDir;
     index index.php index.html index.htm;
 
     location / {
@@ -111,7 +120,7 @@ NGINX;
     }
 }
 
-// Step 5: Install WP-CLI and Configure WordPress (Skip if already configured)
+// Step 5: Install WP-CLI and Configure WordPress
 exec("which wp", $output, $return_var);
 if ($return_var !== 0) {
     exec("curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && chmod +x wp-cli.phar && sudo mv wp-cli.phar /usr/local/bin/wp", $output, $return_var);
@@ -121,19 +130,16 @@ if ($return_var !== 0) {
     }
 }
 
-exec("cd $wordpressDir && sudo -u www-data wp core is-installed", $output, $return_var);
+exec("cd $siteDir && sudo -u www-data wp core config --dbname=$db_name --dbuser=$db_user --dbpass=$db_password --dbhost=localhost --dbprefix=wp_", $output, $return_var);
 if ($return_var !== 0) {
-    exec("cd $wordpressDir && sudo -u www-data wp core config --dbname=$db_name --dbuser=$db_user --dbpass=$db_password --dbhost=localhost --dbprefix=wp_", $output, $return_var);
-    if ($return_var !== 0) {
-        echo json_encode(['success' => false, 'error' => 'Failed to configure WordPress.']);
-        exit;
-    }
+    echo json_encode(['success' => false, 'error' => 'Failed to configure WordPress.']);
+    exit;
+}
 
-    exec("cd $wordpressDir && sudo -u www-data wp core install --url=http://$domain --title=\"$site_name\" --admin_user=$wp_username --admin_password=$wp_password --admin_email=$wp_email", $output, $return_var);
-    if ($return_var !== 0) {
-        echo json_encode(['success' => false, 'error' => 'Failed to install WordPress.']);
-        exit;
-    }
+exec("cd $siteDir && sudo -u www-data wp core install --url=http://$domain --title=\"$site_name\" --admin_user=$wp_username --admin_password=$wp_password --admin_email=$wp_email", $output, $return_var);
+if ($return_var !== 0) {
+    echo json_encode(['success' => false, 'error' => 'Failed to install WordPress.']);
+    exit;
 }
 
 // Save the site details in the database
