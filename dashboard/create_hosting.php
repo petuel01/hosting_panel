@@ -16,21 +16,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $allocated_space = 2000000; // Default 2GB in KB
     $linux_username = $user['username'];
     $password = $_POST['password']; // Use the same password as the user login
+    $user_dir_base = "/home/users";
+    $user_dir = "$user_dir_base/$linux_username";
 
-    // Call the `user.sh` script
-    $script_path = realpath('../user.sh');
-    $command = escapeshellcmd("sudo bash $script_path $linux_username $password $allocated_space");
-    exec($command, $output, $return_var);
-
-    if ($return_var === 0) {
-        // Update the database with Linux username and allocated space
-        $stmt = $pdo->prepare("UPDATE users SET linux_username = ?, allocated_space = ? WHERE id = ?");
-        $stmt->execute([$linux_username, $allocated_space, $user['id']]);
-
-        echo json_encode(['success' => true]);
-    } else {
-        echo json_encode(['success' => false, 'error' => 'Failed to create hosting account.']);
+    // Validate username format
+    if (!preg_match('/^[a-z_][a-z0-9_-]*$/', $linux_username)) {
+        echo json_encode(['success' => false, 'error' => 'Invalid username format.']);
+        exit;
     }
+
+    // Create the Linux user
+    $create_user_cmd = "sudo useradd -m -d $user_dir -s /bin/bash $linux_username";
+    exec($create_user_cmd, $output, $return_var);
+    if ($return_var !== 0) {
+        echo json_encode(['success' => false, 'error' => 'Failed to create Linux user.']);
+        exit;
+    }
+
+    // Set the user's password
+    $set_password_cmd = "echo '$linux_username:$password' | sudo chpasswd";
+    exec($set_password_cmd, $output, $return_var);
+    if ($return_var !== 0) {
+        echo json_encode(['success' => false, 'error' => 'Failed to set user password.']);
+        exit;
+    }
+
+    // Create the user's directory if it doesn't exist
+    if (!is_dir($user_dir)) {
+        if (!mkdir($user_dir, 0755, true)) {
+            echo json_encode(['success' => false, 'error' => 'Failed to create user directory.']);
+            exit;
+        }
+    }
+
+    // Set ownership and permissions for the directory
+    $chown_cmd = "sudo chown $linux_username:$linux_username $user_dir";
+    exec($chown_cmd, $output, $return_var);
+    if ($return_var !== 0) {
+        echo json_encode(['success' => false, 'error' => 'Failed to set ownership for user directory.']);
+        exit;
+    }
+
+    $chmod_cmd = "sudo chmod 755 $user_dir";
+    exec($chmod_cmd, $output, $return_var);
+    if ($return_var !== 0) {
+        echo json_encode(['success' => false, 'error' => 'Failed to set permissions for user directory.']);
+        exit;
+    }
+
+    // Update the database with Linux username and allocated space
+    $stmt = $pdo->prepare("UPDATE users SET linux_username = ?, allocated_space = ? WHERE id = ?");
+    $stmt->execute([$linux_username, $allocated_space, $user['id']]);
+
+    echo json_encode(['success' => true]);
     exit;
 }
 ?>
@@ -39,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html>
 <head>
     <title>Create Hosting Account</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script>
         function createHostingAccount() {
             const progressBar = document.getElementById('progress-bar');
@@ -67,11 +106,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </script>
 </head>
-<body>
-    <h1>Create Hosting Account</h1>
-    <div style="width: 100%; background-color: #f3f3f3; border: 1px solid #ccc;">
-        <div id="progress-bar" style="width: 0%; height: 30px; background-color: #4caf50; text-align: center; color: white;">0%</div>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white text-center">
+                        <h3>Create Hosting Account</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="width: 100%; background-color: #f3f3f3; border: 1px solid #ccc;">
+                            <div id="progress-bar" style="width: 0%; height: 30px; background-color: #4caf50; text-align: center; color: white;">0%</div>
+                        </div>
+                        <button class="btn btn-success mt-3 w-100" onclick="createHostingAccount()">Create Hosting Account</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <button onclick="createHostingAccount()">Create Hosting Account</button>
 </body>
 </html>
