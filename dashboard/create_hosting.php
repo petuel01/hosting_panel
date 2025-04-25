@@ -25,17 +25,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Create the Linux user
-    $create_user_cmd = "sudo useradd -m -d $user_dir -s /bin/bash $linux_username";
-    exec($create_user_cmd, $output, $return_var);
-    if ($return_var !== 0) {
-        echo json_encode(['success' => false, 'error' => 'Failed to create Linux user.']);
-        exit;
+    // Check if the Linux user already exists
+    $check_user_cmd = "id -u $linux_username > /dev/null 2>&1";
+    exec($check_user_cmd, $output, $return_var);
+    if ($return_var === 0) {
+        $user_exists = true;
+    } else {
+        $user_exists = false;
+    }
+
+    // Create the Linux user if it doesn't exist
+    if (!$user_exists) {
+        $create_user_cmd = "sudo useradd -m -d $user_dir -s /bin/bash $linux_username";
+        exec($create_user_cmd . " 2>&1", $output, $return_var);
+
+        // Log the output for debugging
+        file_put_contents('/var/log/create_hosting.log', "Command: $create_user_cmd\nOutput: " . implode("\n", $output) . "\nReturn Code: $return_var\n", FILE_APPEND);
+
+        if ($return_var !== 0) {
+            echo json_encode(['success' => false, 'error' => 'Failed to create Linux user.']);
+            exit;
+        }
     }
 
     // Set the user's password
     $set_password_cmd = "echo '$linux_username:$password' | sudo chpasswd";
-    exec($set_password_cmd, $output, $return_var);
+    exec($set_password_cmd . " 2>&1", $output, $return_var);
+
+    // Log the output for debugging
+    file_put_contents('/var/log/create_hosting.log', "Command: $set_password_cmd\nOutput: " . implode("\n", $output) . "\nReturn Code: $return_var\n", FILE_APPEND);
+
     if ($return_var !== 0) {
         echo json_encode(['success' => false, 'error' => 'Failed to set user password.']);
         exit;
@@ -94,8 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (data.success) {
                     progressBar.style.width = '100%';
                     progressBar.innerText = '100%';
-                    alert('Hosting account created successfully!');
-                    window.location.href = '/dashboard.php';
+                    document.getElementById('continue-button').style.display = 'block';
                 } else {
                     alert(data.error || 'An error occurred.');
                 }
@@ -119,6 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div id="progress-bar" style="width: 0%; height: 30px; background-color: #4caf50; text-align: center; color: white;">0%</div>
                         </div>
                         <button class="btn btn-success mt-3 w-100" onclick="createHostingAccount()">Create Hosting Account</button>
+                        <a href="/wordpress_install.php" id="continue-button" class="btn btn-primary mt-3 w-100" style="display: none;">Continue to WordPress Installation</a>
                     </div>
                 </div>
             </div>
