@@ -34,41 +34,51 @@ if (is_dir($siteDir)) {
 // MySQL root password
 $mysqlRootPassword = 'Petzeus@123';
 
-// Step 1: Install Dependencies
-exec("sudo apt update && sudo apt install -y nginx mysql-server php-fpm php-mysql php-curl php-gd php-mbstring php-xml php-zip unzip curl wget", $output, $return_var);
+// Step 1: Install Dependencies (Skip if already installed)
+exec("dpkg -l | grep -E 'nginx|mysql-server|php-fpm|php-mysql'", $output, $return_var);
 if ($return_var !== 0) {
-    echo json_encode(['success' => false, 'error' => 'Failed to install dependencies.']);
-    exit;
+    exec("sudo apt update && sudo apt install -y nginx mysql-server php-fpm php-mysql php-curl php-gd php-mbstring php-xml php-zip unzip curl wget", $output, $return_var);
+    if ($return_var !== 0) {
+        echo json_encode(['success' => false, 'error' => 'Failed to install dependencies.']);
+        exit;
+    }
 }
 
-// Step 2: Setup MySQL
-$mysqlCommands = <<<EOF
+// Step 2: Setup MySQL (Skip if database already exists)
+exec("sudo mysql -u root -p$mysqlRootPassword -e 'SHOW DATABASES LIKE \"$db_name\";'", $output, $return_var);
+if (empty($output)) {
+    $mysqlCommands = <<<EOF
 CREATE DATABASE IF NOT EXISTS `$db_name` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER IF NOT EXISTS '$db_user'@'localhost' IDENTIFIED BY '$db_password';
 GRANT ALL PRIVILEGES ON `$db_name`.* TO '$db_user'@'localhost';
 FLUSH PRIVILEGES;
 EOF;
 
-exec("echo \"$mysqlCommands\" | sudo mysql -u root -p$mysqlRootPassword", $output, $return_var);
-if ($return_var !== 0) {
-    echo json_encode(['success' => false, 'error' => 'Failed to set up MySQL database and user.']);
-    exit;
+    exec("echo \"$mysqlCommands\" | sudo mysql -u root -p$mysqlRootPassword", $output, $return_var);
+    if ($return_var !== 0) {
+        echo json_encode(['success' => false, 'error' => 'Failed to set up MySQL database and user.']);
+        exit;
+    }
 }
 
-// Step 3: Download and Configure WordPress
-exec("sudo mkdir -p $siteDir && cd $siteDir && sudo wget -q https://wordpress.org/latest.tar.gz && sudo tar -xzf latest.tar.gz --strip-components=1 && sudo rm latest.tar.gz", $output, $return_var);
-if ($return_var !== 0) {
-    echo json_encode(['success' => false, 'error' => 'Failed to download and configure WordPress.']);
-    exit;
-}
-exec("sudo chown -R www-data:www-data $siteDir && sudo find $siteDir -type d -exec chmod 755 {} \\; && sudo find $siteDir -type f -exec chmod 644 {} \\;", $output, $return_var);
-if ($return_var !== 0) {
-    echo json_encode(['success' => false, 'error' => 'Failed to set permissions for WordPress files.']);
-    exit;
+// Step 3: Download and Configure WordPress (Skip if already downloaded)
+if (!is_dir($siteDir)) {
+    exec("sudo mkdir -p $siteDir && cd $siteDir && sudo wget -q https://wordpress.org/latest.tar.gz && sudo tar -xzf latest.tar.gz --strip-components=1 && sudo rm latest.tar.gz", $output, $return_var);
+    if ($return_var !== 0) {
+        echo json_encode(['success' => false, 'error' => 'Failed to download and configure WordPress.']);
+        exit;
+    }
+    exec("sudo chown -R www-data:www-data $siteDir && sudo find $siteDir -type d -exec chmod 755 {} \\; && sudo find $siteDir -type f -exec chmod 644 {} \\;", $output, $return_var);
+    if ($return_var !== 0) {
+        echo json_encode(['success' => false, 'error' => 'Failed to set permissions for WordPress files.']);
+        exit;
+    }
 }
 
-// Step 4: Configure Nginx
-$nginxConfig = <<<NGINX
+// Step 4: Configure Nginx (Skip if configuration already exists)
+$nginxConfigPath = "/etc/nginx/sites-available/$domain";
+if (!file_exists($nginxConfigPath)) {
+    $nginxConfig = <<<NGINX
 server {
     listen 80;
     server_name $domain;
@@ -90,34 +100,41 @@ server {
 }
 NGINX;
 
-exec("echo \"$nginxConfig\" | sudo tee /etc/nginx/sites-available/$domain > /dev/null", $output, $return_var);
-if ($return_var !== 0) {
-    echo json_encode(['success' => false, 'error' => 'Failed to create Nginx configuration.']);
-    exit;
-}
-exec("sudo ln -sf /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/ && sudo nginx -t && sudo systemctl reload nginx", $output, $return_var);
-if ($return_var !== 0) {
-    echo json_encode(['success' => false, 'error' => 'Failed to reload Nginx.']);
-    exit;
-}
-
-// Step 5: Install WP-CLI and Configure WordPress
-exec("curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && chmod +x wp-cli.phar && sudo mv wp-cli.phar /usr/local/bin/wp", $output, $return_var);
-if ($return_var !== 0) {
-    echo json_encode(['success' => false, 'error' => 'Failed to install WP-CLI.']);
-    exit;
+    exec("echo \"$nginxConfig\" | sudo tee $nginxConfigPath > /dev/null", $output, $return_var);
+    if ($return_var !== 0) {
+        echo json_encode(['success' => false, 'error' => 'Failed to create Nginx configuration.']);
+        exit;
+    }
+    exec("sudo ln -sf $nginxConfigPath /etc/nginx/sites-enabled/ && sudo nginx -t && sudo systemctl reload nginx", $output, $return_var);
+    if ($return_var !== 0) {
+        echo json_encode(['success' => false, 'error' => 'Failed to reload Nginx.']);
+        exit;
+    }
 }
 
-exec("cd $siteDir && sudo -u www-data wp core config --dbname=$db_name --dbuser=$db_user --dbpass=$db_password --dbhost=localhost --dbprefix=wp_", $output, $return_var);
+// Step 5: Install WP-CLI and Configure WordPress (Skip if already configured)
+exec("which wp", $output, $return_var);
 if ($return_var !== 0) {
-    echo json_encode(['success' => false, 'error' => 'Failed to configure WordPress.']);
-    exit;
+    exec("curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && chmod +x wp-cli.phar && sudo mv wp-cli.phar /usr/local/bin/wp", $output, $return_var);
+    if ($return_var !== 0) {
+        echo json_encode(['success' => false, 'error' => 'Failed to install WP-CLI.']);
+        exit;
+    }
 }
 
-exec("cd $siteDir && sudo -u www-data wp core install --url=http://$domain --title=\"$site_name\" --admin_user=$wp_username --admin_password=$wp_password --admin_email=$wp_email", $output, $return_var);
+exec("cd $siteDir && sudo -u www-data wp core is-installed", $output, $return_var);
 if ($return_var !== 0) {
-    echo json_encode(['success' => false, 'error' => 'Failed to install WordPress.']);
-    exit;
+    exec("cd $siteDir && sudo -u www-data wp core config --dbname=$db_name --dbuser=$db_user --dbpass=$db_password --dbhost=localhost --dbprefix=wp_", $output, $return_var);
+    if ($return_var !== 0) {
+        echo json_encode(['success' => false, 'error' => 'Failed to configure WordPress.']);
+        exit;
+    }
+
+    exec("cd $siteDir && sudo -u www-data wp core install --url=http://$domain --title=\"$site_name\" --admin_user=$wp_username --admin_password=$wp_password --admin_email=$wp_email", $output, $return_var);
+    if ($return_var !== 0) {
+        echo json_encode(['success' => false, 'error' => 'Failed to install WordPress.']);
+        exit;
+    }
 }
 
 // Save the site details in the database
