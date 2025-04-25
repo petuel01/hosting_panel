@@ -35,7 +35,7 @@ $user = $stmt->fetch(PDO::FETCH_ASSOC);
                             <a href="/user/index.html" class="btn btn-primary">Manage Files</a>
                         <?php else: ?>
                             <p class="text-danger">Hosting Account: Not Created</p>
-                            <a href="/hosting/create_hosting.php" class="btn btn-success">Create Hosting Account</a>
+                            <a href="create_hosting.php" class="btn btn-success">Create Hosting Account</a>
                         <?php endif; ?>
                     </div>
                     <div class="card-footer text-center">
