@@ -51,9 +51,24 @@ $remainingSites = $maxSites - $totalSites;
                             <h6>WordPress Sites</h6>
                             <p>Total Sites Created: <?= $totalSites ?>/<?= $maxSites ?></p>
                             <?php if ($remainingSites > 0): ?>
-                                <button class="btn btn-warning" onclick="showCreateSiteModal()">Create New Site</button>
+                                <a href="install_wp_ui.php" class="btn btn-warning">Create New Site</a>
                             <?php else: ?>
                                 <p class="text-danger">You have reached the maximum number of WordPress sites.</p>
+                            <?php endif; ?>
+                            <hr>
+                            <h6>Existing WordPress Sites</h6>
+                            <?php if ($totalSites > 0): ?>
+                                <ul class="list-group">
+                                    <?php foreach ($wordpressSites as $site): ?>
+                                        <li class="list-group-item">
+                                            <?= htmlspecialchars(basename($site)) ?>
+                                            <a href="http://<?= htmlspecialchars(basename($site)) ?>" class="btn btn-sm btn-primary float-end" target="_blank">Visit Site</a>
+                                            <a href="http://<?= htmlspecialchars(basename($site)) ?>/wp-admin" class="btn btn-sm btn-warning float-end me-2" target="_blank">Admin</a>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php else: ?>
+                                <p>No WordPress sites created yet.</p>
                             <?php endif; ?>
                         <?php else: ?>
                             <p class="text-danger">Hosting Account: Not Created</p>
@@ -67,65 +82,5 @@ $remainingSites = $maxSites - $totalSites;
             </div>
         </div>
     </div>
-
-    <!-- Modal for creating a new WordPress site -->
-    <div class="modal" id="createSiteModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Create New WordPress Site</h5>
-                    <button type="button" class="btn-close" onclick="hideCreateSiteModal()"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="createSiteForm">
-                        <div class="mb-3">
-                            <label for="domain" class="form-label">Domain Name</label>
-                            <input type="text" id="domain" name="domain" class="form-control" placeholder="example.com" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="wp_username" class="form-label">WordPress Username</label>
-                            <input type="text" id="wp_username" name="wp_username" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="wp_password" class="form-label">WordPress Password</label>
-                            <input type="password" id="wp_password" name="wp_password" class="form-control" required>
-                        </div>
-                        <button type="button" class="btn btn-primary" onclick="createSite()">Create Site</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function showCreateSiteModal() {
-            document.getElementById('createSiteModal').style.display = 'block';
-        }
-
-        function hideCreateSiteModal() {
-            document.getElementById('createSiteModal').style.display = 'none';
-        }
-
-        function createSite() {
-            const form = document.getElementById('createSiteForm');
-            const formData = new FormData(form);
-
-            fetch('install_wp.php', {
-                method: 'POST',
-                body: formData
-            })
-                .then(res => res.json())
-                .then(response => {
-                    if (response.success) {
-                        alert(response.message || "WordPress site created successfully!");
-                        hideCreateSiteModal();
-                        location.reload();
-                    } else {
-                        alert(response.error || "Failed to create WordPress site.");
-                    }
-                })
-                .catch(err => alert("Error creating WordPress site"));
-        }
-    </script>
 </body>
 </html>
