@@ -1,5 +1,5 @@
 <?php
-require 'config.php';
+require_once '../database/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Sanitize inputs
@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         // Fetch user from the database
-        $stmt = $pdo->prepare("SELECT id, password FROM users WHERE email = ?");
+        $stmt = $pdo->prepare("SELECT id, username, password FROM users WHERE email = ?");
         $stmt->execute([$email]);
         $user = $stmt->fetch();
 
@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             session_start();
             session_regenerate_id(true);
             $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
             $_SESSION['email'] = $email;
 
             // Redirect to the dashboard
