@@ -5,7 +5,6 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: /auth/login.php');
     exit;
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -31,18 +30,6 @@ if (!isset($_SESSION['user_id'])) {
                             <div class="mb-3">
                                 <label for="site_name" class="form-label">Site Name</label>
                                 <input type="text" id="site_name" name="site_name" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="db_name" class="form-label">Database Name</label>
-                                <input type="text" id="db_name" name="db_name" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="db_user" class="form-label">Database Username</label>
-                                <input type="text" id="db_user" name="db_user" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="db_password" class="form-label">Database Password</label>
-                                <input type="password" id="db_password" name="db_password" class="form-control" required>
                             </div>
                             <div class="mb-3">
                                 <label for="wp_username" class="form-label">WordPress Username</label>
