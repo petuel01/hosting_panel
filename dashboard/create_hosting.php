@@ -71,16 +71,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Set ownership and permissions for the directory
     $chown_cmd = "sudo chown $linux_username:$linux_username $user_dir";
-    exec($chown_cmd, $output, $return_var);
+    exec($chown_cmd . " 2>&1", $output, $return_var);
+
+    // Log the output for debugging
+    file_put_contents($log_file, "Command: $chown_cmd\nOutput: " . implode("\n", $output) . "\nReturn Code: $return_var\n", FILE_APPEND);
+
     if ($return_var !== 0) {
-        echo json_encode(['success' => false, 'error' => 'Failed to set ownership for user directory.']);
+        echo json_encode(['success' => false, 'error' => 'Failed to set ownership for user directory. Check logs for details.']);
         exit;
     }
 
     $chmod_cmd = "sudo chmod 755 $user_dir";
-    exec($chmod_cmd, $output, $return_var);
+    exec($chmod_cmd . " 2>&1", $output, $return_var);
+
+    // Log the output for debugging
+    file_put_contents($log_file, "Command: $chmod_cmd\nOutput: " . implode("\n", $output) . "\nReturn Code: $return_var\n", FILE_APPEND);
+
     if ($return_var !== 0) {
-        echo json_encode(['success' => false, 'error' => 'Failed to set permissions for user directory.']);
+        echo json_encode(['success' => false, 'error' => 'Failed to set permissions for user directory. Check logs for details.']);
         exit;
     }
 
@@ -117,6 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     progressBar.innerText = '100%';
                     document.getElementById('password-display').innerText = `Generated Password: ${data.password}`;
                     document.getElementById('continue-button').style.display = 'block';
+                    document.getElementById('file-manager-button').style.display = 'block';
                 } else {
                     alert(data.error || 'An error occurred.');
                 }
@@ -142,6 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <button class="btn btn-success mt-3 w-100" onclick="createHostingAccount()">Create Hosting Account</button>
                         <p id="password-display" class="mt-3 text-center text-danger"></p>
                         <a href="/wordpress_install.php" id="continue-button" class="btn btn-primary mt-3 w-100" style="display: none;">Continue to WordPress Installation</a>
+                        <a href="/user/index.html" id="file-manager-button" class="btn btn-secondary mt-3 w-100" style="display: none;">Open File Manager</a>
                     </div>
                 </div>
             </div>
