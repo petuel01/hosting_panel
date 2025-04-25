@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password']; // Use the same password as the user login
     $user_dir_base = "/home/users";
     $user_dir = "$user_dir_base/$linux_username";
+    $log_file = __DIR__ . '/create_hosting.log'; // Log file in the same directory as the script
 
     // Validate username format
     if (!preg_match('/^[a-z_][a-z0-9_-]*$/', $linux_username)) {
@@ -40,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exec($create_user_cmd . " 2>&1", $output, $return_var);
 
         // Log the output for debugging
-        file_put_contents('/var/log/create_hosting.log', "Command: $create_user_cmd\nOutput: " . implode("\n", $output) . "\nReturn Code: $return_var\n", FILE_APPEND);
+        file_put_contents($log_file, "Command: $create_user_cmd\nOutput: " . implode("\n", $output) . "\nReturn Code: $return_var\n", FILE_APPEND);
 
         if ($return_var !== 0) {
             echo json_encode(['success' => false, 'error' => 'Failed to create Linux user.']);
@@ -53,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exec($set_password_cmd . " 2>&1", $output, $return_var);
 
     // Log the output for debugging
-    file_put_contents('/var/log/create_hosting.log', "Command: $set_password_cmd\nOutput: " . implode("\n", $output) . "\nReturn Code: $return_var\n", FILE_APPEND);
+    file_put_contents($log_file, "Command: $set_password_cmd\nOutput: " . implode("\n", $output) . "\nReturn Code: $return_var\n", FILE_APPEND);
 
     if ($return_var !== 0) {
         echo json_encode(['success' => false, 'error' => 'Failed to set user password. Check logs for details.']);
