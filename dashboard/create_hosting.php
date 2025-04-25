@@ -15,7 +15,7 @@ $user = $stmt->fetch(PDO::FETCH_ASSOC);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $allocated_space = 2000000; // Default 2GB in KB
     $linux_username = $user['username'];
-    $password = $_POST['password']; // Use the same password as the user login
+    $password = bin2hex(random_bytes(8)); // Generate a random password
     $user_dir_base = "/home/users";
     $user_dir = "$user_dir_base/$linux_username";
     $log_file = __DIR__ . '/create_hosting.log'; // Log file in the same directory as the script
@@ -88,7 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $pdo->prepare("UPDATE users SET linux_username = ?, allocated_space = ? WHERE id = ?");
     $stmt->execute([$linux_username, $allocated_space, $user['id']]);
 
-    echo json_encode(['success' => true]);
+    // Return the generated password to the frontend
+    echo json_encode(['success' => true, 'password' => $password]);
     exit;
 }
 ?>
@@ -107,13 +108,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             fetch('create_hosting.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: '<?= $user['password'] ?>' })
+                body: JSON.stringify({})
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     progressBar.style.width = '100%';
                     progressBar.innerText = '100%';
+                    document.getElementById('password-display').innerText = `Generated Password: ${data.password}`;
                     document.getElementById('continue-button').style.display = 'block';
                 } else {
                     alert(data.error || 'An error occurred.');
@@ -138,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div id="progress-bar" style="width: 0%; height: 30px; background-color: #4caf50; text-align: center; color: white;">0%</div>
                         </div>
                         <button class="btn btn-success mt-3 w-100" onclick="createHostingAccount()">Create Hosting Account</button>
+                        <p id="password-display" class="mt-3 text-center text-danger"></p>
                         <a href="/wordpress_install.php" id="continue-button" class="btn btn-primary mt-3 w-100" style="display: none;">Continue to WordPress Installation</a>
                     </div>
                 </div>
