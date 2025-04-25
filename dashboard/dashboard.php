@@ -32,7 +32,7 @@ $user = $stmt->fetch(PDO::FETCH_ASSOC);
                         <?php if ($user['linux_username']): ?>
                             <p class="text-success">Hosting Account: Created</p>
                             <p>Allocated Space: <?= $user['allocated_space'] / 1024 ?> MB</p>
-                            <a href="/user/index.html" class="btn btn-primary">Manage Files</a>
+                            <a href="/user/index.php" class="btn btn-primary">Manage Files</a>
                         <?php else: ?>
                             <p class="text-danger">Hosting Account: Not Created</p>
                             <a href="create_hosting.php" class="btn btn-success">Create Hosting Account</a>
