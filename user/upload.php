@@ -27,7 +27,7 @@ if (!$userDir || strpos($userDir, realpath($baseDir)) !== 0) {
     exit;
 }
 
-// Resolve the target directory (including subdirectories if provided)
+// Resolve the target directory
 $targetDir = realpath($userDir . DIRECTORY_SEPARATOR . $path);
 if (!$targetDir || strpos($targetDir, $userDir) !== 0 || !is_dir($targetDir)) {
     echo json_encode(['error' => 'Invalid target directory.']);
@@ -37,14 +37,6 @@ if (!$targetDir || strpos($targetDir, $userDir) !== 0 || !is_dir($targetDir)) {
 // Validate the uploaded file
 if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
     echo json_encode(['error' => 'File upload failed.']);
-    exit;
-}
-
-// Validate the file type (only allow images)
-$allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
-$fileMimeType = mime_content_type($file['tmp_name']);
-if (!in_array($fileMimeType, $allowedMimeTypes)) {
-    echo json_encode(['error' => 'Invalid file type. Only JPEG, PNG, and GIF images are allowed.']);
     exit;
 }
 
