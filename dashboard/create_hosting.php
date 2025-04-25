@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     file_put_contents('/var/log/create_hosting.log', "Command: $set_password_cmd\nOutput: " . implode("\n", $output) . "\nReturn Code: $return_var\n", FILE_APPEND);
 
     if ($return_var !== 0) {
-        echo json_encode(['success' => false, 'error' => 'Failed to set user password.']);
+        echo json_encode(['success' => false, 'error' => 'Failed to set user password. Check logs for details.']);
         exit;
     }
 

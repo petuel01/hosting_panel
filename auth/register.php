@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </form>
                     </div>
                     <div class="card-footer text-center">
-                        <small>Already have an account? <a href="/auth/login.php">Login</a></small>
+                        <small>Already have an account? <a href="login.php">Login</a></small>
                     </div>
                 </div>
             </div>
