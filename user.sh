@@ -3,6 +3,7 @@
 # Configuration
 USER_DIR_BASE="/home/users"
 LOG_FILE="/var/log/user_directory_management.log"
+DEFAULT_SIZE_LIMIT=2000000 # Default size limit in KB (2GB)
 
 # Check for root privileges
 if [ "$EUID" -ne 0 ]; then
@@ -50,7 +51,6 @@ create_linux_user() {
 }
 
 # Function to create a user directory (already done via -m -d above, so ensure ownership only)
-# Function to create a user directory (already done via -m -d above, so ensure ownership only)
 create_user_directory() {
     local username=$1
     local user_dir="$USER_DIR_BASE/$username"
@@ -66,7 +66,6 @@ create_user_directory() {
 
     echo "Permissions for $user_dir set to root:root with 755 access."
 }
-
 
 # Function to monitor and enforce size limits
 monitor_and_enforce_limits() {
@@ -95,15 +94,16 @@ monitor_and_enforce_limits() {
 main() {
     local username password size_limit
 
-    if [[ $# -eq 3 ]]; then
+    if [[ $# -ge 2 ]]; then
         username=$1
         password=$2
-        size_limit=$3
+        size_limit=${3:-$DEFAULT_SIZE_LIMIT} # Use the default size limit if not provided
     else
         read -p "Enter the username: " username
         read -s -p "Enter the password: " password
         echo ""
-        read -p "Enter the size limit in KB (e.g., 2000000 for 2GB): " size_limit
+        read -p "Enter the size limit in KB (default is 2000000 for 2GB): " size_limit
+        size_limit=${size_limit:-$DEFAULT_SIZE_LIMIT} # Use the default size limit if input is empty
     fi
 
     validate_username "$username"
