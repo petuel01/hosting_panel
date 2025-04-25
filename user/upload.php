@@ -1,4 +1,12 @@
 <?php
+session_start();
+
+// Ensure the user is logged in
+if (!isset($_SESSION['username'])) {
+    echo json_encode(['error' => 'User not logged in.']);
+    exit;
+}
+
 $username = $_POST['username'] ?? '';
 $path = $_POST['path'] ?? '';
 $file = $_FILES['file'] ?? null;
@@ -29,6 +37,14 @@ if (!$targetDir || strpos($targetDir, $userDir) !== 0 || !is_dir($targetDir)) {
 // Validate the uploaded file
 if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
     echo json_encode(['error' => 'File upload failed.']);
+    exit;
+}
+
+// Validate the file type (only allow images)
+$allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+$fileMimeType = mime_content_type($file['tmp_name']);
+if (!in_array($fileMimeType, $allowedMimeTypes)) {
+    echo json_encode(['error' => 'Invalid file type. Only JPEG, PNG, and GIF images are allowed.']);
     exit;
 }
 
