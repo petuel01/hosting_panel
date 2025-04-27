@@ -10,7 +10,6 @@ require_once '../database/db.php';
 
 $user_id = $_SESSION['user_id'];
 $domain = $_POST['domain'];
-$site_name = $_POST['site_name'];
 $wp_username = $_POST['wp_username'];
 $wp_password = $_POST['wp_password'];
 $wp_email = $_POST['wp_email'];
@@ -61,11 +60,8 @@ if (!is_dir($wordpressDir)) {
     }
 }
 
-// Sanitize the site name to avoid invalid characters
-$site_name = preg_replace('/[^a-zA-Z0-9_-]/', '', $site_name);
-
-// Create the site directory
-$siteDir = $wordpressDir . '/' . $site_name;
+// Use a fixed folder name for the WordPress site
+$siteDir = $wordpressDir . '/site1';
 if (is_dir($siteDir)) {
     // Check if reinstallation is requested
     if (isset($_POST['force_reinstall']) && $_POST['force_reinstall'] === 'true') {
